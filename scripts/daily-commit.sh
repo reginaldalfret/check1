@@ -2,24 +2,23 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STAMP_FILE="$ROOT_DIR/.github/green/daily-log.md"
-UTC_NOW="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 DAY="$(date -u +"%Y-%m-%d")"
+DAY_DIR="$ROOT_DIR/.github/green/daily-commits/$DAY"
+COUNT="${1:-100}"
 
-mkdir -p "$(dirname "$STAMP_FILE")"
+mkdir -p "$DAY_DIR"
 
-if [[ ! -f "$STAMP_FILE" ]]; then
-  cat > "$STAMP_FILE" <<'DOC'
-# Daily Activity Log
+created=0
+for i in $(seq -w 1 "$COUNT"); do
+  FILE="$DAY_DIR/commit-$i.txt"
+  if [[ -f "$FILE" ]]; then
+    continue
+  fi
 
-This file is updated automatically by GitHub Actions once per day to keep contribution activity consistent.
+  echo "commit=$i utc=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" > "$FILE"
+  git add "$FILE"
+  git commit -m "chore: daily activity $DAY #$i" >/dev/null
+  created=$((created + 1))
+done
 
-| Date (UTC) | Commit Timestamp (UTC) |
-|---|---|
-DOC
-fi
-
-# Add one line per day at most.
-if ! grep -q "| $DAY |" "$STAMP_FILE"; then
-  echo "| $DAY | $UTC_NOW |" >> "$STAMP_FILE"
-fi
+echo "Created $created commits for $DAY"
