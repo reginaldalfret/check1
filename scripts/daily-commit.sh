@@ -6,6 +6,11 @@ DAY="$(date -u +"%Y-%m-%d")"
 DAY_DIR="$ROOT_DIR/.github/green/daily-commits/$DAY"
 COUNT="${1:-100}"
 
+if ! [[ "$COUNT" =~ ^[0-9]+$ ]]; then
+  echo "COUNT must be a non-negative integer, got: $COUNT" >&2
+  exit 1
+fi
+
 mkdir -p "$DAY_DIR"
 
 created=0

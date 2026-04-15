@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "17 13 * * *" # 13:17 UTC daily
   workflow_dispatch:
+    inputs:
+      commit_count:
+        description: "How many commits to create"
+        required: true
+        default: "100"
 
 permissions:
   contents: write
@@ -12,18 +17,29 @@ jobs:
   daily-commit:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout default branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
 
-      - name: Configure git author
+      - name: Configure git author for contribution attribution
         run: |
-          git config user.name "${{ vars.CONTRIB_USER_NAME || github.repository_owner }}"
-          git config user.email "${{ vars.CONTRIB_USER_EMAIL || '41898282+github-actions[bot]@users.noreply.github.com' }}"
+          AUTHOR_NAME="${{ vars.CONTRIB_USER_NAME || github.repository_owner }}"
+          AUTHOR_EMAIL="${{ vars.CONTRIB_USER_EMAIL || format('{0}+{1}@users.noreply.github.com', github.repository_owner_id, github.repository_owner) }}"
 
-      - name: Create 100 commits for today
-        run: bash scripts/daily-commit.sh 100
+          git config user.name "$AUTHOR_NAME"
+          git config user.email "$AUTHOR_EMAIL"
+          git config author.name "$AUTHOR_NAME"
+          git config author.email "$AUTHOR_EMAIL"
 
-      - name: Push commits
-        run: git push
+          echo "Using author: $AUTHOR_NAME <$AUTHOR_EMAIL>"
+          echo "Default branch: ${{ github.event.repository.default_branch }}"
+
+      - name: Create commits
+        env:
+          COMMIT_COUNT: ${{ github.event.inputs.commit_count || '100' }}
+        run: bash scripts/daily-commit.sh "$COMMIT_COUNT"
+
+      - name: Push to default branch
+        run: git push origin "HEAD:${{ github.event.repository.default_branch }}"
